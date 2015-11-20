@@ -12,7 +12,7 @@ Go Fetch will download packages with similar semantics to `go get` (from which i
 2. It will parse all the Go source files in that package and inspect the packages imported by those files,
 3. For every import that has a prefix which looks "domain-y" (e.g., `github.com/...`, `bitbucket.com/...`, etc) it will recursively fetch that package as well, and so on.
 
-When scanning for imports Go Fetch makes efforts to avoid private-looking files and packages, including: directories known to be used by dependency managers (`Godep`, etc), special packages (`vendor`, `internal`), hidden files, and files prefixed with `_`.
+When scanning for imports Go Fetch makes efforts to avoid private-looking files and packages, including: directories known to be used by dependency managers (`Godep`, etc), hidden files, and files prefixed with `_`.
 
 ## VCS File Stripping
 
