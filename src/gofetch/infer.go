@@ -42,21 +42,43 @@ import (
 )
 
 var domainPrefixRegex = regexp.MustCompile("^[a-zA-Z0-9]([a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.([a-zA-Z0-9]{2,20})")
+var privatePathRegex  = regexp.MustCompile("(^|\\/)([_].*|Godep)($|\\/)")
+
+/**
+ * Import inference options
+ */
+type inferOptions struct {
+  ExcludeFilter pathFilter
+}
 
 /**
  * Exclude imports that don't start with what looks like a "domain.name"
  */
 func looksLikeADomainNameFilter(n string) bool {
-  return domainPrefixRegex.MatchString(n)
+  return domainPrefixRegex.MatchString(n) && !privatePathRegex.MatchString(n)
+}
+
+/**
+ * Exclude sources that look private (e.g., start with '.', '_', or are a directory known to be used by a dependency manager)
+ */
+func looksPrivateSourceFilter(n string) bool {
+  switch {
+    case len(n) < 1 || n[0] == '.' || n[0] == '_':
+      return false
+    case strings.EqualFold(n, "Godep"):
+      return false
+    default:
+      return true
+  }
 }
 
 /**
  * Imports
  */
-func importsForSourceDir(dir string, filter pathFilter) ([]string, error) {
+func importsForSourceDir(dir string, filter pathFilter, opts inferOptions) ([]string, error) {
   
   set := make(map[string]struct{})
-  err := importsForSourceDirInc(set, dir, true, filter)
+  err := importsForSourceDirInc(set, dir, true, filter, opts)
   if err != nil {
     return nil, err
   }
@@ -74,7 +96,7 @@ func importsForSourceDir(dir string, filter pathFilter) ([]string, error) {
 /**
  * Incremental imports
  */
-func importsForSourceDirInc(imp map[string]struct{}, dir string, rec bool, filter pathFilter) error {
+func importsForSourceDirInc(imp map[string]struct{}, dir string, rec bool, filter pathFilter, opts inferOptions) error {
   
   name := path.Base(dir)
   if len(name) < 1 || name[0] == '.' {
@@ -101,11 +123,8 @@ func importsForSourceDirInc(imp map[string]struct{}, dir string, rec bool, filte
   fset := token.NewFileSet()
   for _, e := range items {
     name = e.Name()
-    switch {
-      case len(name) < 1 || name[0] == '.' || name[0] == '_':
-        continue
-      case strings.EqualFold(name, "Godep"):
-        continue
+    if opts.ExcludeFilter != nil && !opts.ExcludeFilter(name) {
+      continue
     }
     abs := path.Join(dir, name)
     if !e.IsDir() {
@@ -113,7 +132,7 @@ func importsForSourceDirInc(imp map[string]struct{}, dir string, rec bool, filte
         fset.AddFile(abs, -1, int(e.Size()))
       }
     }else if rec {
-      err := importsForSourceDirInc(imp, abs, rec, filter)
+      err := importsForSourceDirInc(imp, abs, rec, filter, opts)
       if err != nil {
         return err
       }

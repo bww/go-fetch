@@ -94,12 +94,66 @@ func main() {
  * Infer imports
  */
 func infer(args []string) {
-  // for _, d := range deps {
-  //   if _, ok := noted[d]; !ok {
-  //     fmt.Printf(" + %v\n", d)
-  //     noted[e] = struct{}{}
-  //   }
-  // }
+  
+  fSource := cmdline.String ("source",  os.Getenv("PWD"),  "The directory in which package sources are found.")
+  cmdline.Parse(args)
+  
+  opts := inferOptions{
+    ExcludeFilter: looksPrivateSourceFilter,
+  }
+  
+  noted := make(map[string]struct{})
+  for _, e := range cmdline.Args() {
+    err := inferInc(noted, *fSource, []string{e}, opts)
+    if err != nil {
+      fmt.Printf("%v: %v", cmd, err)
+      return
+    }
+  }
+  
+ }
+
+/**
+ * Process packages
+ */
+func inferInc(noted map[string]struct{}, srcbase string, pkgs []string, opts inferOptions) error {
+  for _, e := range pkgs {
+    if _, ok := noted[e]; ok {
+      continue
+    }else{
+      noted[e] = struct{}{}
+    }
+    
+    // find our repo
+    dir, info, _, err := packageRepo(e, srcbase)
+    if err != nil {
+      return err
+    }
+    if info == nil {
+      continue
+    }
+    
+    // infer dependencies
+    deps, err := packageDeps(dir, opts)
+    if err != nil {
+      return err
+    }
+    
+    // list them
+    for _, d := range deps {
+      if _, ok := noted[d]; !ok {
+        fmt.Printf(" + %v\n", d)
+      }
+    }
+    
+    // recurse to dependencies
+    err = inferInc(noted, srcbase, deps, opts)
+    if err != nil {
+      return err
+    }
+    
+  }
+  return nil
 }
 
 /**
@@ -115,6 +169,9 @@ func fetch(args []string) {
   opts := fetchOptions{
     AllowUpdate: *fUpdate,
     StripVCS: *fStripVCS,
+    InferOptions: inferOptions{
+      ExcludeFilter: looksPrivateSourceFilter,
+    },
   }
   
   noted := make(map[string]struct{})
@@ -138,6 +195,8 @@ func fetchInc(noted map[string]struct{}, pkgs []string, outbase string, opts fet
     }
     
     fmt.Printf(" + %v\n", e)
+    
+    // find our repo
     dir, info, repo, err := packageRepo(e, outbase)
     if err != nil {
       return err
@@ -167,7 +226,7 @@ func fetchInc(noted map[string]struct{}, pkgs []string, outbase string, opts fet
     }
     
     // infer dependencies
-    deps, err := packageDeps(dir)
+    deps, err := packageDeps(dir, opts.InferOptions)
     if err != nil {
       return err
     }

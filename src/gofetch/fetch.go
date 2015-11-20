@@ -41,6 +41,7 @@ import (
  */
 type fetchOptions struct {
   AllowUpdate, StripVCS bool
+  InferOptions inferOptions
 }
 
 /**
@@ -102,9 +103,9 @@ func fetchPackage(output string, info os.FileInfo, repo *repoRoot, opts fetchOpt
 /**
  * Infer package dependencies
  */
-func packageDeps(dir string) ([]string, error) {
+func packageDeps(dir string, opts inferOptions) ([]string, error) {
   
-  imp, err := importsForSourceDir(dir, looksLikeADomainNameFilter)
+  imp, err := importsForSourceDir(dir, looksLikeADomainNameFilter, opts)
   if err != nil {
     return nil, fmt.Errorf("could not infer dependencies: %v\n", err)
   }
