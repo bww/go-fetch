@@ -10,9 +10,7 @@ Go Fetch will download packages with similar semantics to `go get` (from which i
 
 1. Given a package (e.g., `github.com/gorilla/websocket`) Go Fetch will download the package source to the directory you indicate,
 2. It will parse all the Go source files in that package and inspect the packages imported by those files,
-3. For every import that has a prefix which looks "domain-y" (e.g., `github.com/...`, `bitbucket.com/...`, etc) it will recursively fetch dependencies.
-
-## What it does not do
+3. For every import that has a prefix which looks "domain-y" (e.g., `github.com/...`, `bitbucket.com/...`, etc) it will recursively fetch that package as well, and so on.
 
 Go Fetch strips VCS information when it downloads packages and therefore packages cannot be updated by pulling (or the equivalent for non-git VCS). This is done so that it's straightforward to commit the source to vendored packages into your own repository.
 
