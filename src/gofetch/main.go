@@ -171,14 +171,14 @@ func inferInc(noted map[string]struct{}, srcbase string, pkgs []string, opts inf
  */
 func fetch(args []string) {
   
-  fOutput   := cmdline.String ("output",  os.Getenv("PWD"),  "The directory in which to write packages.")
-  fUpdate   := cmdline.Bool   ("update",  false,             "Update packages if they have already been downloaded. When combined with -s packages are remoted and re-fetched.")
-  fStripVCS := cmdline.Bool   ("strip",   false,             "Strip VCS files from downloaded packages (.git, .svn, .hg, .bzr).")
+  fOutput   := cmdline.String ("output",    os.Getenv("PWD"),  "The directory in which to write packages.")
+  fUpdate   := cmdline.Bool   ("update",    false,             "Update packages if they have already been downloaded. When combined with -s packages are remoted and re-fetched.")
+  fKeepVCS  := cmdline.Bool   ("keep-vcs",  false,             "Retain VCS files from downloaded packages (.git, .svn, .hg, .bzr).")
   cmdline.Parse(args)
   
   opts := fetchOptions{
     AllowUpdate: *fUpdate,
-    StripVCS: *fStripVCS,
+    StripVCS: !*fKeepVCS,
     InferOptions: inferOptions{
       ExcludeFilter: looksPrivateSourceFilter,
     },
@@ -198,18 +198,23 @@ func fetch(args []string) {
  */
 func fetchInc(noted map[string]struct{}, pkgs []string, outbase string, opts fetchOptions) error {
   for _, e := range pkgs {
-    if _, ok := noted[e]; ok {
-      continue
-    }else{
-      noted[e] = struct{}{}
-    }
-    
-    fmt.Printf(" + %v\n", e)
     
     // find our repo
     dir, info, repo, err := packageRepo(e, outbase)
     if err != nil {
       return err
+    }
+    
+    if _, ok := noted[dir]; ok {
+      continue
+    }else{
+      noted[dir] = struct{}{}
+    }
+    
+    if repo.root != e {
+      fmt.Printf(" + %v (%v)\n", e, repo.root)
+    }else{
+      fmt.Printf(" + %v\n", e)
     }
     
     // if we're stripping VCS files we cannot update, we must delete and re-fecth
