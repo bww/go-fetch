@@ -129,6 +129,9 @@ func importsForSourceDirInc(imp map[string]struct{}, dir string, rec bool, filte
     }
     abs := path.Join(dir, name)
     if !e.IsDir() {
+      if e.Size() == 0 {
+        continue // ignore empty files
+      }
       if strings.EqualFold(path.Ext(name), ".go") {
         fset.AddFile(abs, -1, int(e.Size()))
       }
