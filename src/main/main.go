@@ -35,6 +35,7 @@ import (
   "fmt"
   "flag"
   "path"
+  "strings"
 )
 
 var go15VendorExperiment bool
@@ -55,6 +56,7 @@ func main() {
   cmdline   := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
   fOutput   := cmdline.String   ("o",  pwd,     "The directory in which to write packages")
   fUpdate   := cmdline.Bool     ("u",  false,   "Update the package if it has already been downloaded")
+  fListOnly := cmdline.Bool     ("l",  false,   "Do not update packages; only list imports if a package exists")
   fVerbose  := cmdline.Bool     ("v",  false,   "Be more verbose")
   cmdline.Parse(os.Args[1:])
   
@@ -83,30 +85,41 @@ func main() {
     if buildV{
       fmt.Printf("%v: %v -> %v\n", cmd, rr.repo, output)
     }
-    if info == nil {
-      base := path.Dir(output)
-      err = os.MkdirAll(base, os.ModeDir | 0755)
-      if err != nil {
-        fmt.Printf("%v: could not create directory: %v\n", cmd, err)
-        return
-      }
-      err = rr.vcs.create(output, rr.repo)
-      if err != nil {
-        fmt.Printf("%v: could not create repo: %v\n", cmd, err)
-        return
-      }
-    }else if *fUpdate{
-      err = rr.vcs.download(output)
-      if err != nil {
-        fmt.Printf("%v: could not update directory: %v\n", cmd, err)
-        return
-      }
-    }else{
-      if buildV {
-        fmt.Printf("%v: %v exists\n", cmd, rr.root)
+    
+    if !*fListOnly {
+      if info == nil {
+        base := path.Dir(output)
+        err = os.MkdirAll(base, os.ModeDir | 0755)
+        if err != nil {
+          fmt.Printf("%v: could not create directory: %v\n", cmd, err)
+          return
+        }
+        err = rr.vcs.create(output, rr.repo)
+        if err != nil {
+          fmt.Printf("%v: could not create repo: %v\n", cmd, err)
+          return
+        }
+      }else if *fUpdate{
+        err = rr.vcs.download(output)
+        if err != nil {
+          fmt.Printf("%v: could not update directory: %v\n", cmd, err)
+          return
+        }
+      }else{
+        if buildV {
+          fmt.Printf("%v: %v exists\n", cmd, rr.root)
+        }
+        continue
       }
     }
     
+    imp, err := importsForSourceDir(output, looksLikeADomainNameFilter)
+    if err != nil {
+      fmt.Printf("%v: could not infer dependencies: %v\n", cmd, err)
+      return
+    }
+    
+    fmt.Println(strings.Join(imp, "\n"))
   }
   
 }

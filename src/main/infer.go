@@ -1,0 +1,144 @@
+// 
+// Go Fetch Dependencies
+// Copyright (c) 2015 Brian W. Wolter, All rights reserved.
+// 
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+// 
+//   * Redistributions of source code must retain the above copyright notice, this
+//     list of conditions and the following disclaimer.
+// 
+//   * Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//     
+//   * Neither the names of Brian W. Wolter nor the names of the contributors may
+//     be used to endorse or promote products derived from this software without
+//     specific prior written permission.
+//     
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+// OF THE POSSIBILITY OF SUCH DAMAGE.
+// 
+
+package main
+
+import (
+  "os"
+  "io"
+  "fmt"
+  "path"
+  "regexp"
+  "strings"
+  // "go/ast"
+  "go/token"
+  "go/parser"
+)
+
+type importFilter func(string)(bool)
+
+var domainPrefixRegex = regexp.MustCompile("^[a-zA-Z0-9]([a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.([a-zA-Z0-9]{2,20})")
+
+/**
+ * Exclude imports that don't start with what looks like a "domain.name"
+ */
+func looksLikeADomainNameFilter(n string) bool {
+  return domainPrefixRegex.MatchString(n)
+}
+
+/**
+ * Imports
+ */
+func importsForSourceDir(dir string, filter importFilter) ([]string, error) {
+  
+  set := make(map[string]struct{})
+  err := importsForSourceDirInc(set, dir, true)
+  if err != nil {
+    return nil, err
+  }
+  
+  imp := make([]string, 0)
+  for k, _ := range set {
+    if filter == nil || filter(k) {
+      imp = append(imp, k)
+    }
+  }
+  
+  return imp, nil
+}
+
+/**
+ * Incremental imports
+ */
+func importsForSourceDirInc(imp map[string]struct{}, dir string, rec bool) error {
+  
+  name := path.Base(dir)
+  if len(name) < 1 || name[0] == '.' {
+    return nil
+  }
+  
+  info, err := os.Stat(dir)
+  if err != nil {
+    return err
+  }
+  if !info.IsDir() {
+    return fmt.Errorf("Path is not a directory: %v", dir)
+  }
+  
+  file, err := os.Open(dir)
+  if err != nil {
+    return err
+  }
+  items, err := file.Readdir(0)
+  if err != nil && err != io.EOF {
+    return err
+  }
+  
+  fset := token.NewFileSet()
+  for _, e := range items {
+    name = e.Name()
+    if len(name) < 1 || name[0] == '.' {
+      continue
+    }
+    abs := path.Join(dir, name)
+    if !e.IsDir() {
+      if strings.EqualFold(path.Ext(name), ".go") {
+        fset.AddFile(abs, -1, int(e.Size()))
+      }
+    }else if rec {
+      err := importsForSourceDirInc(imp, abs, rec)
+      if err != nil {
+        return err
+      }
+    }
+  }
+  
+  pkgs, err := parser.ParseDir(fset, dir, nil, parser.ImportsOnly)
+  if err != nil {
+    return err
+  }
+  
+  for _, e := range pkgs {
+    if e.Files != nil {
+      for _, f := range e.Files {
+        if f.Imports != nil {
+          for _, v := range f.Imports {
+            if lit := v.Path.Value; len(lit) > 2 {
+              imp[lit[1:len(lit)-1]] = struct{}{}
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  return nil
+}
+
