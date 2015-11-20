@@ -2,7 +2,7 @@
 
 Go Fetch can be used to copy dependencies recursively into a project, it is intended to be used with the "Go 1.5 Vendor Experiment" `vendor` package.
 
-Go Fetch is not a dependency manager. Unlike the [many](https://github.com/tools/godep), [many](https://github.com/niemeyer/gopkg), [many](https://github.com/gpmgo/gopm), [many](https://github.com/mattn/gom), [many](https://github.com/nitrous-io/goop) Go dependency managers out there, Go Fetch does not attempt to manage anything for you. It assumes that you will update dependencies manually by running `gofetch` and manage the set of dependencies you require externally – in a makefile, for example.
+Go Fetch is not a dependency manager. Unlike the [many](https://github.com/tools/godep), [many](https://github.com/niemeyer/gopkg), [many](https://github.com/gpmgo/gopm), [many](https://github.com/mattn/gom), [many](https://github.com/nitrous-io/goop) Go dependency managers out there, Go Fetch does not attempt to manage anything for you. It makes it simple to download packages along with their dependencies in a manner suitable for use in a Go 1.5 `vendor` package.
 
 ## What it does
 
