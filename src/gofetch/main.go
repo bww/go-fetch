@@ -109,8 +109,9 @@ func infer(args []string) {
   }
   
   noted := make(map[string]struct{})
+  listed := make(map[string]struct{})
   for _, e := range cmdline.Args() {
-    err := inferInc(noted, *fSource, []string{e}, opts)
+    err := inferInc(noted, listed, *fSource, []string{e}, opts)
     if err != nil {
       fmt.Printf("%v: %v", cmd, err)
       return
@@ -122,13 +123,8 @@ func infer(args []string) {
 /**
  * Process packages
  */
-func inferInc(noted map[string]struct{}, srcbase string, pkgs []string, opts inferOptions) error {
+func inferInc(noted, listed map[string]struct{}, srcbase string, pkgs []string, opts inferOptions) error {
   for _, e := range pkgs {
-    if _, ok := noted[e]; ok {
-      continue
-    }else{
-      noted[e] = struct{}{}
-    }
     
     // find our repo
     dir, info, _, err := packageRepo(e, srcbase)
@@ -139,6 +135,12 @@ func inferInc(noted map[string]struct{}, srcbase string, pkgs []string, opts inf
       continue
     }
     
+    if _, ok := noted[dir]; ok {
+      continue
+    }else{
+      noted[dir] = struct{}{}
+    }
+    
     // infer dependencies
     deps, err := packageDeps(dir, opts)
     if err != nil {
@@ -147,17 +149,19 @@ func inferInc(noted map[string]struct{}, srcbase string, pkgs []string, opts inf
     
     // list them
     for _, d := range deps {
-      if _, ok := noted[d]; !ok {
-        if opts.ListPaths {
-          fmt.Printf(" + %v\n", path.Join(srcbase, d))
-        }else if opts.ListPackages {
-          fmt.Printf(" + %v\n", d)
-        }
+      if _, ok := listed[d]; ok {
+        continue
       }
+      if opts.ListPaths {
+        fmt.Printf("%v\n", path.Join(srcbase, d))
+      }else if opts.ListPackages {
+        fmt.Printf("%v\n", d)
+      }
+      listed[d] = struct{}{}
     }
     
     // recurse to dependencies
-    err = inferInc(noted, srcbase, deps, opts)
+    err = inferInc(noted, listed, srcbase, deps, opts)
     if err != nil {
       return err
     }
