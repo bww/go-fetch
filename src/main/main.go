@@ -35,7 +35,6 @@ import (
   "fmt"
   "flag"
   "path"
-  "strings"
 )
 
 var go15VendorExperiment bool
@@ -51,7 +50,7 @@ var buildL bool // -l flag
 var cmd string
 
 /**
- * 
+ * You know what it does
  */
 func main() {
   cmd = path.Base(os.Args[0])
@@ -68,10 +67,24 @@ func main() {
   buildU = *fUpdate
   buildL = *fListOnly
   
-  args := cmdline.Args()
-  for _, e := range args {
+  noted := make(map[string]struct{})
+  proc(noted, cmdline.Args(), *fOutput)
+  
+}
+
+/**
+ * Process packages
+ */
+func proc(noted map[string]struct{}, pkgs []string, outbase string) {
+  for _, e := range pkgs {
+    if _, ok := noted[e]; ok {
+      continue
+    }else{
+      noted[e] = struct{}{}
+    }
+    fmt.Printf(" + %v\n", e)
     
-    dir, info, repo, err := packageRepo(e, *fOutput)
+    dir, info, repo, err := packageRepo(e, outbase)
     if err != nil {
       fmt.Printf("%v: %v", cmd, err)
       return
@@ -91,10 +104,16 @@ func main() {
       return
     }
     
-    if buildL {
-      fmt.Println(strings.Join(deps, "\n"))
+    if !buildL {
+      proc(noted, deps, outbase)
+    }else{
+      for _, d := range deps {
+        if _, ok := noted[d]; !ok {
+          fmt.Printf(" + %v\n", d)
+          noted[e] = struct{}{}
+        }
+      }
     }
     
   }
-  
 }

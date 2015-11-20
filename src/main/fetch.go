@@ -61,19 +61,6 @@ func packageRepo(pkg, base string) (string, os.FileInfo, *repoRoot, error) {
 func fetchPackage(output string, info os.FileInfo, repo *repoRoot) error {
   var err error
   
-  // // Analyze the import path to determine the version control system,
-  // // repository, and the import path for the root of the repository.
-  // rr, err := repoRootForImportPath(pkg, secure)
-  // if err != nil {
-  //   return "", fmt.Errorf("could not determine repo root: %v\n", err)
-  // }
-  
-  // output := path.Join(outroot, rr.root)
-  // info, err := os.Stat(output)
-  // if err != nil && !os.IsNotExist(err) {
-  //   return "", fmt.Errorf("could not read directory: %v\n", err)
-  // }
-  
   if buildV{
     fmt.Printf("%v: %v -> %v\n", cmd, repo.repo, output)
   }
