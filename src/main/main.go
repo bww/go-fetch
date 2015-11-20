@@ -45,81 +45,56 @@ var buildN bool // -n flag
 var buildV bool // -v flag
 var buildX bool // -x flag
 var buildI bool // -i flag
+var buildU bool // -u flag
+var buildL bool // -l flag
+
+var cmd string
 
 /**
  * 
  */
 func main() {
-  cmd := path.Base(os.Args[0])
-  pwd := os.Getenv("PWD")
+  cmd = path.Base(os.Args[0])
   
   cmdline   := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-  fOutput   := cmdline.String   ("o",  pwd,     "The directory in which to write packages")
-  fUpdate   := cmdline.Bool     ("u",  false,   "Update the package if it has already been downloaded")
-  fListOnly := cmdline.Bool     ("l",  false,   "Do not update packages; only list imports if a package exists")
-  fVerbose  := cmdline.Bool     ("v",  false,   "Be more verbose")
+  fOutput   := cmdline.String   ("o",  os.Getenv("PWD"),  "The directory in which to write packages")
+  fUpdate   := cmdline.Bool     ("u",  false,             "Update the package if it has already been downloaded")
+  fListOnly := cmdline.Bool     ("l",  false,             "Do not update packages; only list imports if a package exists")
+  fVerbose  := cmdline.Bool     ("v",  false,             "Be more verbose")
   cmdline.Parse(os.Args[1:])
   
   go15VendorExperiment = os.Getenv("GO15VENDOREXPERIMENT") != ""
   buildV = *fVerbose
+  buildU = *fUpdate
+  buildL = *fListOnly
   
   args := cmdline.Args()
   for _, e := range args {
-    var err error
     
-    // Analyze the import path to determine the version control system,
-    // repository, and the import path for the root of the repository.
-    rr, err := repoRootForImportPath(e, secure)
+    dir, info, repo, err := packageRepo(e, *fOutput)
     if err != nil {
-      fmt.Printf("%v: could not determine repo root: %v\n", cmd, err)
+      fmt.Printf("%v: %v", cmd, err)
       return
     }
     
-    output := path.Join(*fOutput, rr.root)
-    info, err := os.Stat(output)
-    if err != nil && !os.IsNotExist(err) {
-      fmt.Printf("%v: could not read directory: %v\n", cmd, err)
-      return
-    }
-    
-    if buildV{
-      fmt.Printf("%v: %v -> %v\n", cmd, rr.repo, output)
-    }
-    
-    if !*fListOnly {
-      if info == nil {
-        base := path.Dir(output)
-        err = os.MkdirAll(base, os.ModeDir | 0755)
-        if err != nil {
-          fmt.Printf("%v: could not create directory: %v\n", cmd, err)
-          return
-        }
-        err = rr.vcs.create(output, rr.repo)
-        if err != nil {
-          fmt.Printf("%v: could not create repo: %v\n", cmd, err)
-          return
-        }
-      }else if *fUpdate{
-        err = rr.vcs.download(output)
-        if err != nil {
-          fmt.Printf("%v: could not update directory: %v\n", cmd, err)
-          return
-        }
-      }else{
-        if buildV {
-          fmt.Printf("%v: %v exists\n", cmd, rr.root)
-        }
-        continue
+    if !buildL {
+      err = fetchPackage(dir, info, repo)
+      if err != nil {
+        fmt.Printf("%v: %v", cmd, err)
+        return
       }
     }
     
-    imp, err := importsForSourceDir(output, looksLikeADomainNameFilter)
+    deps, err := packageDeps(dir)
     if err != nil {
-      fmt.Printf("%v: could not infer dependencies: %v\n", cmd, err)
+      fmt.Printf("%v: %v", cmd, err)
       return
     }
     
-    fmt.Println(strings.Join(imp, "\n"))
+    if buildL {
+      fmt.Println(strings.Join(deps, "\n"))
+    }
+    
   }
   
 }

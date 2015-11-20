@@ -59,16 +59,16 @@ func looksLikeADomainNameFilter(n string) bool {
 func importsForSourceDir(dir string, filter importFilter) ([]string, error) {
   
   set := make(map[string]struct{})
-  err := importsForSourceDirInc(set, dir, true)
+  err := importsForSourceDirInc(set, dir, true, filter)
   if err != nil {
     return nil, err
   }
   
-  imp := make([]string, 0)
+  imp := make([]string, len(set))
+  i := 0
   for k, _ := range set {
-    if filter == nil || filter(k) {
-      imp = append(imp, k)
-    }
+    imp[i] = k
+    i++
   }
   
   return imp, nil
@@ -77,7 +77,7 @@ func importsForSourceDir(dir string, filter importFilter) ([]string, error) {
 /**
  * Incremental imports
  */
-func importsForSourceDirInc(imp map[string]struct{}, dir string, rec bool) error {
+func importsForSourceDirInc(imp map[string]struct{}, dir string, rec bool, filter importFilter) error {
   
   name := path.Base(dir)
   if len(name) < 1 || name[0] == '.' {
@@ -113,7 +113,7 @@ func importsForSourceDirInc(imp map[string]struct{}, dir string, rec bool) error
         fset.AddFile(abs, -1, int(e.Size()))
       }
     }else if rec {
-      err := importsForSourceDirInc(imp, abs, rec)
+      err := importsForSourceDirInc(imp, abs, rec, filter)
       if err != nil {
         return err
       }
@@ -131,7 +131,10 @@ func importsForSourceDirInc(imp map[string]struct{}, dir string, rec bool) error
         if f.Imports != nil {
           for _, v := range f.Imports {
             if lit := v.Path.Value; len(lit) > 2 {
-              imp[lit[1:len(lit)-1]] = struct{}{}
+              str := lit[1:len(lit)-1]
+              if filter == nil || filter(str) {
+                imp[str] = struct{}{}
+              }
             }
           }
         }
