@@ -93,6 +93,15 @@ func proc(noted map[string]struct{}, pkgs []string, outbase string) {
       return
     }
     
+    if info != nil && buildU {
+      info = nil
+      err = os.RemoveAll(dir)
+      if err != nil {
+        fmt.Printf("%v: %v", cmd, err)
+        return
+      }
+    }
+    
     if !buildL {
       err = fetchPackage(dir, info, repo)
       if err != nil {
