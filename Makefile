@@ -1,11 +1,19 @@
 
 export GOPATH := $(GOPATH):$(PWD)
 
-.PHONY: all deps test
+BIN=bin
+PRODUCT=$(BIN)/gofetch
+
+.PHONY: all deps test install
 
 all: gofetch
 
 deps:
 
+test:
+
 gofetch: deps
-	go build -o bin/gofetch ./src/gofetch
+	go build -o $(PRODUCT) ./src/gofetch
+
+install: gofetch
+	install $(PRODUCT) /usr/local/bin/
