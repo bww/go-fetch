@@ -49,6 +49,7 @@ var privatePathRegex  = regexp.MustCompile("(^|\\/)([_].*|Godep)($|\\/)")
  */
 type inferOptions struct {
   ExcludeFilter pathFilter
+  ListPaths, ListPackages bool
 }
 
 /**

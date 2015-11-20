@@ -95,11 +95,17 @@ func main() {
  */
 func infer(args []string) {
   
-  fSource := cmdline.String ("source",  os.Getenv("PWD"),  "The directory in which package sources are found.")
+  fSource   := cmdline.String ("source",  os.Getenv("PWD"),   "The directory in which package sources are found.")
+  fListPath := cmdline.Bool   ("paths",   false,              "List paths instead of packages.")
   cmdline.Parse(args)
   
   opts := inferOptions{
     ExcludeFilter: looksPrivateSourceFilter,
+  }
+  if *fListPath {
+    opts.ListPaths = true
+  }else{
+    opts.ListPackages = true
   }
   
   noted := make(map[string]struct{})
@@ -142,7 +148,11 @@ func inferInc(noted map[string]struct{}, srcbase string, pkgs []string, opts inf
     // list them
     for _, d := range deps {
       if _, ok := noted[d]; !ok {
-        fmt.Printf(" + %v\n", d)
+        if opts.ListPaths {
+          fmt.Printf(" + %v\n", path.Join(srcbase, d))
+        }else if opts.ListPackages {
+          fmt.Printf(" + %v\n", d)
+        }
       }
     }
     
