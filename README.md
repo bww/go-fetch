@@ -12,8 +12,8 @@ Go Fetch will download packages with similar semantics to `go get` (from which i
 2. It will parse all the Go source files in that package and inspect the packages imported by those files,
 3. For every import that has a prefix which looks "domain-y" (e.g., `github.com/...`, `bitbucket.com/...`, etc) it will recursively fetch that package as well, and so on.
 
-When scanning for imports Go Fetch makes efforts to avoid private-looking files and packages, including: directories known to be used by dependency managers (`Godep`, etc), special packages (`vendor`, `internal`), hidden files, and files prefixed with '_'.
+When scanning for imports Go Fetch makes efforts to avoid private-looking files and packages, including: directories known to be used by dependency managers (`Godep`, etc), special packages (`vendor`, `internal`), hidden files, and files prefixed with `_`.
 
-Go Fetch will strip VCS information when it downloads packages in which case packages cannot be updated by downloading incremental changes. This is done so that it's straightforward to commit the downloaded package sources into your own repository.
+## VCS File Stripping
 
-In order to "update" a package it must be re-fetched in its entirety and this must be done explicitly. Presumably the updated repo (and it's dependencies, which are also updated as part of the process) would be committed into your repo.
+By default, Go Fetch will strip VCS files when it downloads packages (that is: `.git`, `.hg`, `.svn`, `.bzr`). This is done so that it's straightforward to commit the downloaded package sources into your own repository under your `vendor` package. As a result packages cannot be updated by downloading incremental changes, they must be re-fetched in full. In practice this is generally not much of an inconvenience (it can be disabled with `-keep-vcs` if you insist).
