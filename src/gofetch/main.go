@@ -135,6 +135,7 @@ func inferInc(noted, listed map[string]struct{}, srcbase string, pkgs []string, 
       continue
     }
     
+    // make sure we haven't already visited this repo
     if _, ok := noted[dir]; ok {
       continue
     }else{
@@ -209,6 +210,7 @@ func fetchInc(noted map[string]struct{}, pkgs []string, outbase string, opts fet
       return err
     }
     
+    // make sure we haven't already visited this repo
     if _, ok := noted[dir]; ok {
       continue
     }else{
