@@ -101,8 +101,11 @@ func importsForSourceDirInc(imp map[string]struct{}, dir string, rec bool, filte
   fset := token.NewFileSet()
   for _, e := range items {
     name = e.Name()
-    if len(name) < 1 || name[0] == '.' {
-      continue
+    switch {
+      case len(name) < 1 || name[0] == '.' || name[0] == '_':
+        continue
+      case strings.EqualFold(name, "Godep"):
+        continue
     }
     abs := path.Join(dir, name)
     if !e.IsDir() {

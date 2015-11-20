@@ -61,9 +61,6 @@ func packageRepo(pkg, base string) (string, os.FileInfo, *repoRoot, error) {
 func fetchPackage(output string, info os.FileInfo, repo *repoRoot) error {
   var err error
   
-  if buildV{
-    fmt.Printf("%v: %v -> %v\n", cmd, repo.repo, output)
-  }
   if info == nil {
     base := path.Dir(output)
     

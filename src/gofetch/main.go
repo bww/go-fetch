@@ -39,8 +39,6 @@ import (
 
 var go15VendorExperiment bool
 
-//var buildA bool // -a flag
-//var buildN bool // -n flag
 var buildV bool // -v flag
 var buildX bool // -x flag
 var buildU bool // -u flag
@@ -73,44 +71,49 @@ func main() {
   buildS = *fStripVCS
   
   noted := make(map[string]struct{})
-  proc(noted, cmdline.Args(), *fOutput)
+  err := proc(noted, cmdline.Args(), *fOutput)
+  if err != nil {
+    fmt.Printf("%v: %v", cmd, err)
+    return
+  }
   
 }
 
 /**
  * Process packages
  */
-func proc(noted map[string]struct{}, pkgs []string, outbase string) {
+func proc(noted map[string]struct{}, pkgs []string, outbase string) error {
   for _, e := range pkgs {
+    
     if _, ok := noted[e]; ok {
       continue
     }else{
       noted[e] = struct{}{}
     }
-    fmt.Printf(" + %v\n", e)
     
+    fmt.Printf(" + %v\n", e)
     dir, info, repo, err := packageRepo(e, outbase)
     if err != nil {
-      fmt.Printf("%v: %v", cmd, err)
-      return
+      return err
     }
     
     // if we're stripping VCS files we cannot update, we must delete and re-fecth
     if info != nil && buildU && buildS {
       err = os.RemoveAll(dir)
       if err != nil {
-        fmt.Printf("%v: %v", cmd, err)
-        return
+        return err
       }
       info = nil
     }
     
     // if we're not only listing packages, actually fetch them
     if !buildL {
+      if buildV{
+        fmt.Printf(" * %v -> %v\n", repo.repo, dir)
+      }
       err = fetchPackage(dir, info, repo)
       if err != nil {
-        fmt.Printf("%v: %v", cmd, err)
-        return
+        return err
       }
     }
     
@@ -118,15 +121,13 @@ func proc(noted map[string]struct{}, pkgs []string, outbase string) {
     if buildS {
       err = prunePath(dir, vcsFileFilter, true)
       if err != nil {
-        fmt.Printf("%v: %v", cmd, err)
-        return
+        return err
       }
     }
     
     deps, err := packageDeps(dir)
     if err != nil {
-      fmt.Printf("%v: %v", cmd, err)
-      return
+      return err
     }
     
     if !buildL {
@@ -141,4 +142,5 @@ func proc(noted map[string]struct{}, pkgs []string, outbase string) {
     }
     
   }
+  return nil
 }

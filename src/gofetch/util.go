@@ -72,7 +72,6 @@ func prunePath(dir string, filter pathFilter, rec bool) error {
   for _, e := range items {
     abs := path.Join(dir, e.Name())
     if filter(abs) {
-      fmt.Printf("PRUNE: %v\n", abs)
       err = os.RemoveAll(abs)
     }else if e.IsDir() && rec {
       err = prunePath(abs, filter, rec)
