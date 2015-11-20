@@ -108,9 +108,6 @@ func proc(noted map[string]struct{}, pkgs []string, outbase string) error {
     
     // if we're not only listing packages, actually fetch them
     if !buildL {
-      if buildV{
-        fmt.Printf(" * %v -> %v\n", repo.repo, dir)
-      }
       err = fetchPackage(dir, info, repo)
       if err != nil {
         return err
