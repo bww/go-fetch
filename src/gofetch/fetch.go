@@ -84,7 +84,7 @@ func fetchPackage(output string, info os.FileInfo, repo *repoRoot) error {
   }else{
     
     if buildV {
-      fmt.Printf("%v: %v exists\n", cmd, repo.root)
+      fmt.Printf("%v: %v exists (update to refresh)\n", cmd, repo.root)
     }
     
   }
