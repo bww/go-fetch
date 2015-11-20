@@ -35,43 +35,90 @@ import (
   "fmt"
   "flag"
   "path"
+  "strings"
 )
 
 var go15VendorExperiment bool
 
 var buildV bool // -v flag
 var buildX bool // -x flag
-var buildU bool // -u flag
-var buildL bool // -l flag
-var buildD bool // -D flag
-var buildS bool // -s flag
 
-var cmd string
+var optVerbose bool
+var optDebug bool
+
+var cmd = path.Base(os.Args[0])
+var cmdline = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+/**
+ * Init
+ */
+func init() {
+  cmdline.BoolVar (&optVerbose, "verbose",  false,   "Be verbose.")
+  cmdline.BoolVar (&optDebug,   "debug",    false,   "Be even more verbose.")
+}
+
+/**
+ * Print usage
+ */
+func usage() {
+  fmt.Printf("usage: %v (fetch|infer) [-...] package1, [package2, ...]\n", cmd)
+}
 
 /**
  * You know what it does
  */
 func main() {
-  cmd = path.Base(os.Args[0])
   
-  cmdline   := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-  fOutput   := cmdline.String   ("o",  os.Getenv("PWD"),  "The directory in which to write packages.")
-  fUpdate   := cmdline.Bool     ("u",  false,             "Update packages if they have already been downloaded.")
-  fListOnly := cmdline.Bool     ("l",  false,             "Do not update packages; only list imports if a package exists.")
-  fVerbose  := cmdline.Bool     ("v",  false,             "Be more verbose.")
-  fStripVCS := cmdline.Bool     ("s",  false,             "Strip VCS files from the downloaded packages.")
-  fDebug    := cmdline.Bool     ("D",  false,             "Be even more verbose.")
-  cmdline.Parse(os.Args[1:])
+  if len(os.Args) < 2 {
+    usage()
+    return
+  }
   
   go15VendorExperiment = os.Getenv("GO15VENDOREXPERIMENT") != ""
-  buildV = *fVerbose
-  buildU = *fUpdate
-  buildL = *fListOnly
-  buildD = *fDebug
-  buildS = *fStripVCS
+  
+  act := os.Args[1]
+  switch {
+    case strings.HasPrefix("fetch", act):
+      fetch(os.Args[2:])
+    case strings.HasPrefix("infer", act):
+      infer(os.Args[2:])
+    default:
+      fmt.Printf("error: no such command %q\n", act)
+      usage()
+      return
+  }
+  
+}
+
+/**
+ * Infer imports
+ */
+func infer(args []string) {
+  // for _, d := range deps {
+  //   if _, ok := noted[d]; !ok {
+  //     fmt.Printf(" + %v\n", d)
+  //     noted[e] = struct{}{}
+  //   }
+  // }
+}
+
+/**
+ * Fetch packages
+ */
+func fetch(args []string) {
+  
+  fOutput   := cmdline.String ("output",  os.Getenv("PWD"),  "The directory in which to write packages.")
+  fUpdate   := cmdline.Bool   ("update",  false,             "Update packages if they have already been downloaded. When combined with -s packages are remoted and re-fetched.")
+  fStripVCS := cmdline.Bool   ("strip",   false,             "Strip VCS files from downloaded packages (.git, .svn, .hg, .bzr).")
+  cmdline.Parse(args)
+  
+  opts := fetchOptions{
+    AllowUpdate: *fUpdate,
+    StripVCS: *fStripVCS,
+  }
   
   noted := make(map[string]struct{})
-  err := proc(noted, cmdline.Args(), *fOutput)
+  err := fetchInc(noted, cmdline.Args(), *fOutput, opts)
   if err != nil {
     fmt.Printf("%v: %v", cmd, err)
     return
@@ -82,9 +129,8 @@ func main() {
 /**
  * Process packages
  */
-func proc(noted map[string]struct{}, pkgs []string, outbase string) error {
+func fetchInc(noted map[string]struct{}, pkgs []string, outbase string, opts fetchOptions) error {
   for _, e := range pkgs {
-    
     if _, ok := noted[e]; ok {
       continue
     }else{
@@ -98,7 +144,7 @@ func proc(noted map[string]struct{}, pkgs []string, outbase string) error {
     }
     
     // if we're stripping VCS files we cannot update, we must delete and re-fecth
-    if info != nil && buildU && buildS {
+    if info != nil && opts.AllowUpdate && opts.StripVCS {
       err = os.RemoveAll(dir)
       if err != nil {
         return err
@@ -107,35 +153,29 @@ func proc(noted map[string]struct{}, pkgs []string, outbase string) error {
     }
     
     // if we're not only listing packages, actually fetch them
-    if !buildL {
-      err = fetchPackage(dir, info, repo)
-      if err != nil {
-        return err
-      }
+    err = fetchPackage(dir, info, repo, opts)
+    if err != nil {
+      return err
     }
     
     // if we're stripping VCS files, do that
-    if buildS {
+    if opts.StripVCS {
       err = prunePath(dir, vcsFileFilter, true)
       if err != nil {
         return err
       }
     }
     
+    // infer dependencies
     deps, err := packageDeps(dir)
     if err != nil {
       return err
     }
     
-    if !buildL {
-      proc(noted, deps, outbase)
-    }else{
-      for _, d := range deps {
-        if _, ok := noted[d]; !ok {
-          fmt.Printf(" + %v\n", d)
-          noted[e] = struct{}{}
-        }
-      }
+    // recurse to dependencies
+    err = fetchInc(noted, deps, outbase, opts)
+    if err != nil {
+      return err
     }
     
   }

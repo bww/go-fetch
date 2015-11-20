@@ -369,7 +369,7 @@ func (v *vcsCmd) run1(dir string, cmdline string, keyval []string, verbose bool)
 		return nil, err
 	}
 
-	if buildD {
+	if optDebug {
 		fmt.Println("#", v.cmd, strings.Join(args, " "))
 	}
 	cmd := exec.Command(v.cmd, args...)

@@ -4,7 +4,7 @@ export GOPATH := $(GOPATH):$(PWD)
 BIN=bin
 PRODUCT=$(BIN)/gofetch
 
-.PHONY: all deps test install
+.PHONY: all deps test gofetch install
 
 all: gofetch
 

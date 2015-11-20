@@ -37,6 +37,13 @@ import (
 )
 
 /**
+ * Fetch options
+ */
+type fetchOptions struct {
+  AllowUpdate, StripVCS bool
+}
+
+/**
  * Fetch a package
  */
 func packageRepo(pkg, base string) (string, os.FileInfo, *repoRoot, error) {
@@ -58,7 +65,7 @@ func packageRepo(pkg, base string) (string, os.FileInfo, *repoRoot, error) {
 /**
  * Fetch a package
  */
-func fetchPackage(output string, info os.FileInfo, repo *repoRoot) error {
+func fetchPackage(output string, info os.FileInfo, repo *repoRoot, opts fetchOptions) error {
   var err error
   
   if info == nil {
@@ -74,7 +81,7 @@ func fetchPackage(output string, info os.FileInfo, repo *repoRoot) error {
       return fmt.Errorf("could not create repo: %v\n", err)
     }
     
-  }else if buildU {
+  }else if opts.AllowUpdate {
     
     err = repo.vcs.download(output)
     if err != nil {
@@ -83,7 +90,7 @@ func fetchPackage(output string, info os.FileInfo, repo *repoRoot) error {
     
   }else{
     
-    if buildV {
+    if optVerbose {
       fmt.Printf("%v: %v exists (update to refresh)\n", cmd, repo.root)
     }
     
