@@ -19,12 +19,6 @@ import (
 	"sync"
 )
 
-var buildA bool	// -a flag
-var buildN bool // -n flag
-var buildV bool // -v flag
-var buildX bool // -x flag
-var buildI bool // -i flag
-
 // envForDir returns a copy of the environment
 // suitable for running in the given directory.
 // The environment is the current process's environment
@@ -366,7 +360,7 @@ func (v *vcsCmd) run1(dir string, cmdline string, keyval []string, verbose bool)
 	for i, arg := range args {
 		args[i] = expand(m, arg)
 	}
-
+	
 	_, err := exec.LookPath(v.cmd)
 	if err != nil {
 		fmt.Fprintf(os.Stderr,
@@ -375,6 +369,9 @@ func (v *vcsCmd) run1(dir string, cmdline string, keyval []string, verbose bool)
 		return nil, err
 	}
 
+	if buildV {
+		fmt.Println("#", v.cmd, strings.Join(args, " "))
+	}
 	cmd := exec.Command(v.cmd, args...)
 	cmd.Dir = dir
 	cmd.Env = envForDir(cmd.Dir, os.Environ())

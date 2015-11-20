@@ -39,17 +39,27 @@ import (
 
 var go15VendorExperiment bool
 
+var buildA bool // -a flag
+var buildN bool // -n flag
+var buildV bool // -v flag
+var buildX bool // -x flag
+var buildI bool // -i flag
+
 /**
  * 
  */
 func main() {
-  cmd := os.Args[0]
+  cmd := path.Base(os.Args[0])
+  pwd := os.Getenv("PWD")
   
-  cmdline := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-  fOutput := cmdline.String   ("o",  os.Getenv("PWD"),  "The directory in which to write packages")
+  cmdline   := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+  fOutput   := cmdline.String   ("o",  pwd,     "The directory in which to write packages")
+  fUpdate   := cmdline.Bool     ("u",  false,   "Update the package if it has already been downloaded")
+  fVerbose  := cmdline.Bool     ("v",  false,   "Be more verbose")
   cmdline.Parse(os.Args[1:])
   
   go15VendorExperiment = os.Getenv("GO15VENDOREXPERIMENT") != ""
+  buildV = *fVerbose
   
   args := cmdline.Args()
   for _, e := range args {
@@ -64,31 +74,36 @@ func main() {
     }
     
     output := path.Join(*fOutput, rr.root)
-    fmt.Printf("%v: %v (%v) -> %v\n", rr.vcs.cmd, rr.repo, rr.root, output)
-    
     info, err := os.Stat(output)
     if err != nil && !os.IsNotExist(err) {
       fmt.Printf("%v: could not read directory: %v\n", cmd, err)
       return
     }
     
+    if buildV{
+      fmt.Printf("%v: %v -> %v\n", cmd, rr.repo, output)
+    }
     if info == nil {
-      base := path.Join(*fOutput, path.Dir(e))
+      base := path.Dir(output)
       err = os.MkdirAll(base, os.ModeDir | 0755)
       if err != nil {
         fmt.Printf("%v: could not create directory: %v\n", cmd, err)
         return
       }
-      err = rr.vcs.create(rr.repo, path.Base(output))
+      err = rr.vcs.create(output, rr.repo)
       if err != nil {
         fmt.Printf("%v: could not create repo: %v\n", cmd, err)
         return
       }
-    }else{
+    }else if *fUpdate{
       err = rr.vcs.download(output)
       if err != nil {
         fmt.Printf("%v: could not update directory: %v\n", cmd, err)
         return
+      }
+    }else{
+      if buildV {
+        fmt.Printf("%v: %v exists\n", cmd, rr.root)
       }
     }
     
