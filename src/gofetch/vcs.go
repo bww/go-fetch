@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"singleflight"
+	"gofetch/singleflight"
 	"log"
 	"net/url"
 	"os"

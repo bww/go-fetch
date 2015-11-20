@@ -8,4 +8,4 @@ all: gofetch
 deps:
 
 gofetch: deps
-	go build -o bin/gofetch ./src/main
+	go build -o bin/gofetch ./src/gofetch
