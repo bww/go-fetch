@@ -39,14 +39,14 @@ import (
 
 var go15VendorExperiment bool
 
-var buildA bool // -a flag
-var buildN bool // -n flag
+//var buildA bool // -a flag
+//var buildN bool // -n flag
 var buildV bool // -v flag
 var buildX bool // -x flag
-var buildI bool // -i flag
 var buildU bool // -u flag
 var buildL bool // -l flag
 var buildD bool // -D flag
+var buildS bool // -s flag
 
 var cmd string
 
@@ -57,11 +57,12 @@ func main() {
   cmd = path.Base(os.Args[0])
   
   cmdline   := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-  fOutput   := cmdline.String   ("o",  os.Getenv("PWD"),  "The directory in which to write packages")
-  fUpdate   := cmdline.Bool     ("u",  false,             "Update the package if it has already been downloaded")
-  fListOnly := cmdline.Bool     ("l",  false,             "Do not update packages; only list imports if a package exists")
-  fVerbose  := cmdline.Bool     ("v",  false,             "Be more verbose")
-  fDebug    := cmdline.Bool     ("D",  false,             "Be even more verbose")
+  fOutput   := cmdline.String   ("o",  os.Getenv("PWD"),  "The directory in which to write packages.")
+  fUpdate   := cmdline.Bool     ("u",  false,             "Update packages if they have already been downloaded.")
+  fListOnly := cmdline.Bool     ("l",  false,             "Do not update packages; only list imports if a package exists.")
+  fVerbose  := cmdline.Bool     ("v",  false,             "Be more verbose.")
+  fStripVCS := cmdline.Bool     ("s",  false,             "Strip VCS files from the downloaded packages.")
+  fDebug    := cmdline.Bool     ("D",  false,             "Be even more verbose.")
   cmdline.Parse(os.Args[1:])
   
   go15VendorExperiment = os.Getenv("GO15VENDOREXPERIMENT") != ""
@@ -69,6 +70,7 @@ func main() {
   buildU = *fUpdate
   buildL = *fListOnly
   buildD = *fDebug
+  buildS = *fStripVCS
   
   noted := make(map[string]struct{})
   proc(noted, cmdline.Args(), *fOutput)
@@ -93,17 +95,28 @@ func proc(noted map[string]struct{}, pkgs []string, outbase string) {
       return
     }
     
-    if info != nil && buildU {
-      info = nil
+    // if we're stripping VCS files we cannot update, we must delete and re-fecth
+    if info != nil && buildU && buildS {
       err = os.RemoveAll(dir)
+      if err != nil {
+        fmt.Printf("%v: %v", cmd, err)
+        return
+      }
+      info = nil
+    }
+    
+    // if we're not only listing packages, actually fetch them
+    if !buildL {
+      err = fetchPackage(dir, info, repo)
       if err != nil {
         fmt.Printf("%v: %v", cmd, err)
         return
       }
     }
     
-    if !buildL {
-      err = fetchPackage(dir, info, repo)
+    // if we're stripping VCS files, do that
+    if buildS {
+      err = prunePath(dir, vcsFileFilter, true)
       if err != nil {
         fmt.Printf("%v: %v", cmd, err)
         return

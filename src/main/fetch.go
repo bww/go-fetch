@@ -66,23 +66,30 @@ func fetchPackage(output string, info os.FileInfo, repo *repoRoot) error {
   }
   if info == nil {
     base := path.Dir(output)
+    
     err = os.MkdirAll(base, os.ModeDir | 0755)
     if err != nil {
       return fmt.Errorf("could not create directory: %v\n", err)
     }
+    
     err = repo.vcs.create(output, repo.repo)
     if err != nil {
       return fmt.Errorf("could not create repo: %v\n", err)
     }
+    
   }else if buildU {
+    
     err = repo.vcs.download(output)
     if err != nil {
       return fmt.Errorf("could not update directory: %v\n", err)
     }
+    
   }else{
+    
     if buildV {
       fmt.Printf("%v: %v exists\n", cmd, repo.root)
     }
+    
   }
   
   return nil

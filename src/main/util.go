@@ -35,51 +35,22 @@ import (
   "io"
   "fmt"
   "path"
-  "regexp"
-  "strings"
-  "go/token"
-  "go/parser"
 )
 
-var domainPrefixRegex = regexp.MustCompile("^[a-zA-Z0-9]([a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.([a-zA-Z0-9]{2,20})")
+type pathFilter func(string)(bool)
 
 /**
- * Exclude imports that don't start with what looks like a "domain.name"
+ * Match VCS files
  */
-func looksLikeADomainNameFilter(n string) bool {
-  return domainPrefixRegex.MatchString(n)
+func vcsFileFilter(p string) bool {
+  n := path.Base(p)
+  return n == ".git" || n == ".svn" || n == ".hg" || n == ".bzr"
 }
 
 /**
- * Imports
+ * Delete files in a directory hierarchy which match the provided filter.
  */
-func importsForSourceDir(dir string, filter pathFilter) ([]string, error) {
-  
-  set := make(map[string]struct{})
-  err := importsForSourceDirInc(set, dir, true, filter)
-  if err != nil {
-    return nil, err
-  }
-  
-  imp := make([]string, len(set))
-  i := 0
-  for k, _ := range set {
-    imp[i] = k
-    i++
-  }
-  
-  return imp, nil
-}
-
-/**
- * Incremental imports
- */
-func importsForSourceDirInc(imp map[string]struct{}, dir string, rec bool, filter pathFilter) error {
-  
-  name := path.Base(dir)
-  if len(name) < 1 || name[0] == '.' {
-    return nil
-  }
+func prunePath(dir string, filter pathFilter, rec bool) error {
   
   info, err := os.Stat(dir)
   if err != nil {
@@ -98,47 +69,18 @@ func importsForSourceDirInc(imp map[string]struct{}, dir string, rec bool, filte
     return err
   }
   
-  fset := token.NewFileSet()
   for _, e := range items {
-    name = e.Name()
-    if len(name) < 1 || name[0] == '.' {
-      continue
+    abs := path.Join(dir, e.Name())
+    if filter(abs) {
+      fmt.Printf("PRUNE: %v\n", abs)
+      err = os.RemoveAll(abs)
+    }else if e.IsDir() && rec {
+      err = prunePath(abs, filter, rec)
     }
-    abs := path.Join(dir, name)
-    if !e.IsDir() {
-      if strings.EqualFold(path.Ext(name), ".go") {
-        fset.AddFile(abs, -1, int(e.Size()))
-      }
-    }else if rec {
-      err := importsForSourceDirInc(imp, abs, rec, filter)
-      if err != nil {
-        return err
-      }
-    }
-  }
-  
-  pkgs, err := parser.ParseDir(fset, dir, nil, parser.ImportsOnly)
-  if err != nil {
-    return err
-  }
-  
-  for _, e := range pkgs {
-    if e.Files != nil {
-      for _, f := range e.Files {
-        if f.Imports != nil {
-          for _, v := range f.Imports {
-            if lit := v.Path.Value; len(lit) > 2 {
-              str := lit[1:len(lit)-1]
-              if filter == nil || filter(str) {
-                imp[str] = struct{}{}
-              }
-            }
-          }
-        }
-      }
+    if err != nil {
+      return err
     }
   }
   
   return nil
 }
-
