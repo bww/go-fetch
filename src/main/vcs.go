@@ -116,8 +116,8 @@ var vcsHg = &vcsCmd{
 	name: "Mercurial",
 	cmd:  "hg",
 
-	createCmd:   []string{"clone -U {repo} {dir}"},
-	downloadCmd: []string{"pull"},
+	createCmd:   	[]string{"clone -U {repo} {dir}"},
+	downloadCmd: 	[]string{"pull"},
 
 	// We allow both tag and branch names as 'tags'
 	// for selecting a version.  This lets people have
