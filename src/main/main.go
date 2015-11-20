@@ -46,6 +46,7 @@ var buildX bool // -x flag
 var buildI bool // -i flag
 var buildU bool // -u flag
 var buildL bool // -l flag
+var buildD bool // -D flag
 
 var cmd string
 
@@ -60,12 +61,14 @@ func main() {
   fUpdate   := cmdline.Bool     ("u",  false,             "Update the package if it has already been downloaded")
   fListOnly := cmdline.Bool     ("l",  false,             "Do not update packages; only list imports if a package exists")
   fVerbose  := cmdline.Bool     ("v",  false,             "Be more verbose")
+  fDebug    := cmdline.Bool     ("D",  false,             "Be even more verbose")
   cmdline.Parse(os.Args[1:])
   
   go15VendorExperiment = os.Getenv("GO15VENDOREXPERIMENT") != ""
   buildV = *fVerbose
   buildU = *fUpdate
   buildL = *fListOnly
+  buildD = *fDebug
   
   noted := make(map[string]struct{})
   proc(noted, cmdline.Args(), *fOutput)
