@@ -61,7 +61,7 @@ func init() {
  * Print usage
  */
 func usage() {
-  fmt.Printf("usage: %v (fetch|infer) [-...] package1, [package2, ...]\n", cmd)
+  fmt.Printf("usage: %v (fetch|scan) [-options] package1 [package2 ...]\n", cmd)
 }
 
 /**
@@ -80,7 +80,7 @@ func main() {
   switch {
     case strings.HasPrefix("fetch", act):
       fetch(os.Args[2:])
-    case strings.HasPrefix("infer", act):
+    case strings.HasPrefix("scan", act):
       infer(os.Args[2:])
     default:
       fmt.Printf("error: no such command %q\n", act)
