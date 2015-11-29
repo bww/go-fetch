@@ -57,7 +57,6 @@ func packageRepo(pkg string, remap map[string]string, base string) (string, os.F
   
   cached, ok := repoCache[pkg]
   if ok {
-    fmt.Printf("CACHED: %v\n", pkg)
     return cached.Output, cached.Stat, cached.Repo, nil
   }
   
