@@ -42,7 +42,13 @@ import (
 )
 
 var domainPrefixRegex = regexp.MustCompile("^[a-zA-Z0-9]([a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.([a-zA-Z0-9]{2,20})")
-var privatePathRegex  = regexp.MustCompile("(^|\\/)([_].*|Godep)($|\\/)")
+var privatePathRegex  = regexp.MustCompile("(^|\\/)([_].*|Godep|third_party)($|\\/)")
+
+var problemPackages = []string{
+  "golang.org/x/tools/cmd/fiximports/testdata",
+  "golang.org/x/tools/go/loader/testdata",
+  "camlistore.org/depcheck",
+}
 
 /**
  * Import inference options
@@ -60,17 +66,32 @@ func looksLikeADomainNameFilter(n string) bool {
 }
 
 /**
- * Exclude sources that look private (e.g., start with '.', '_', or are a directory known to be used by a dependency manager)
+ * Exclude sources that look private (e.g., start with '.', '_'; are a directory known
+ * to be used by a dependency manager; are a test file (with suffix '_test.go'); or are
+ * otherwise known to be problematic for some reason)
  */
 func looksPrivateSourceFilter(n string) bool {
+  ts := "_test.go"
+  
+  base := path.Base(n)
   switch {
-    case len(n) < 1 || n[0] == '.' || n[0] == '_':
+    case len(base) < 1 || base[0] == '.' || base[0] == '_':
       return false
-    case strings.EqualFold(n, "Godep"):
+    case len(base) > len(ts) && strings.EqualFold(base[:len(base) - len(ts)], ts):
       return false
-    default:
-      return true
+    case strings.EqualFold(base, "Godep"):
+      return false
+    case strings.EqualFold(base, "third_party"):
+      return false
   }
+  
+  for _, e := range problemPackages {
+    if strings.HasSuffix(n, e) {
+      return false
+    }
+  }
+  
+  return true
 }
 
 /**
@@ -124,10 +145,10 @@ func importsForSourceDirInc(imp map[string]struct{}, dir string, rec bool, filte
   fset := token.NewFileSet()
   for _, e := range items {
     name = e.Name()
-    if opts.ExcludeFilter != nil && !opts.ExcludeFilter(name) {
+    abs := path.Join(dir, name)
+    if opts.ExcludeFilter != nil && !opts.ExcludeFilter(abs) {
       continue
     }
-    abs := path.Join(dir, name)
     if !e.IsDir() {
       if e.Size() == 0 {
         continue // ignore empty files
