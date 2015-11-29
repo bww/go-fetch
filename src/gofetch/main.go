@@ -115,7 +115,7 @@ func infer(args []string) {
   for _, e := range cmdline.Args() {
     err := inferInc(noted, listed, *fSource, []string{e}, nil, opts)
     if err != nil {
-      fmt.Printf("%v: %v", cmd, err)
+      fmt.Printf("%v: %v\n", cmd, err)
       return
     }
   }
@@ -130,8 +130,18 @@ func inferInc(noted, listed map[string]struct{}, srcbase string, pkgs []string, 
     
     // find our repo
     dir, info, _, err := packageRepo(e, remap, srcbase)
-    if err != nil {
-      return err
+    if err == errRepoRootNotFound {
+      dir, srcbase = e, e
+      info, err = os.Stat(dir)
+      if err != nil {
+        if os.IsNotExist(err) {
+          return fmt.Errorf("no such package or path: %v\n", e)
+        }else{
+          return fmt.Errorf("could not read directory: %v\n", err)
+        }
+      }
+    }else if err != nil {
+      return fmt.Errorf("%v: %v", e, err)
     }
     if info == nil {
       continue
@@ -206,7 +216,7 @@ func fetch(args []string) {
   noted := make(map[string]struct{})
   err := fetchInc(noted, cmdline.Args(), mapPackages, *fOutput, opts)
   if err != nil {
-    fmt.Printf("%v: %v", cmd, err)
+    fmt.Printf("%v: %v\n", cmd, err)
     return
   }
   

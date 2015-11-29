@@ -36,6 +36,8 @@ import (
   "path"
 )
 
+var errRepoRootNotFound = fmt.Errorf("could not find repo root")
+
 type repoInfo struct {
   Output  string
   Stat    os.FileInfo
@@ -62,7 +64,7 @@ func packageRepo(pkg string, remap map[string]string, base string) (string, os.F
   
   repo, err := repoRootForImportPath(pkg, secure)
   if err != nil {
-    return "", nil, nil, fmt.Errorf("could not determine repo root: %v\n", err)
+    return "", nil, nil, errRepoRootNotFound
   }
   
   output := path.Join(base, repo.root)
