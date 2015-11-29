@@ -996,7 +996,6 @@ func bitbucketVCS(match map[string]string) error {
 				}
 			}
 		}
-
 		if resp.SCM == "" {
 			return err
 		}
