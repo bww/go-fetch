@@ -91,6 +91,8 @@ func looksPrivateSourceFilter(n string) bool {
       return false
     case len(base) > len(ts) && strings.EqualFold(base[:len(base) - len(ts)], ts):
       return false
+    case strings.EqualFold(base, "vendor"):
+      return false
     case strings.EqualFold(base, "Godep"):
       return false
     case strings.EqualFold(base, "third_party"):
@@ -150,7 +152,10 @@ func importsForSourceDirInc(imp map[string]struct{}, dir string, rec bool, filte
   file, err := os.Open(dir)
   if err != nil {
     return err
+  }else{
+    defer file.Close()
   }
+  
   items, err := file.Readdir(0)
   if err != nil && err != io.EOF {
     return err

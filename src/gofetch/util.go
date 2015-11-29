@@ -63,7 +63,10 @@ func prunePath(dir string, filter pathFilter, rec bool) error {
   file, err := os.Open(dir)
   if err != nil {
     return err
+  }else{
+    defer file.Close()
   }
+  
   items, err := file.Readdir(0)
   if err != nil && err != io.EOF {
     return err

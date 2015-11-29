@@ -56,7 +56,7 @@ var cmdline = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 func init() {
   cmdline.BoolVar (&optVerbose,     "verbose",  false,  "Be verbose.")
   cmdline.BoolVar (&optDebug,       "debug",    false,  "Be even more verbose.")
-  cmdline.Var     (&optMapPackages, "map",              "Explicitly map a package to its root (e.g., 'github.com/a/b/c/d=github.com/a/b'). This can be used to correct for broken repo hosts.")
+  cmdline.Var     (&optMapPackages, "map",              "Explicitly map a package to its root (e.g., 'github.com/a/b/c/d=github.com/a/b'). This can be used to correct for broken or badly behaving repos.")
 }
 
 /**
