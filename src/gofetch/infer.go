@@ -42,9 +42,9 @@ import (
 )
 
 var domainPrefixRegex = regexp.MustCompile("^[a-zA-Z0-9]([a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.([a-zA-Z0-9]{2,20})")
-var privatePathRegex  = regexp.MustCompile("(^|\\/)([_].*|Godep|third_party)($|\\/)")
+var privatePathRegex  = regexp.MustCompile("(^|\\/)([_].*|Godep|third_party|pkg)($|\\/)")
 
-var problemPackages = []string{
+var defaultExcludePackages = []string{
   "golang.org/x/tools/cmd/fiximports/testdata",
   "golang.org/x/tools/go/loader/testdata",
   "camlistore.org/depcheck",
@@ -59,10 +59,22 @@ type inferOptions struct {
 }
 
 /**
+ * Exclude a package?
+ */
+func excludePackage(n string, s []string) bool {
+  for _, e := range s {
+    if strings.HasPrefix(strings.ToLower(n), strings.ToLower(e)) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
  * Exclude imports that don't start with what looks like a "domain.name"
  */
 func looksLikeADomainNameFilter(n string) bool {
-  return domainPrefixRegex.MatchString(n) && !privatePathRegex.MatchString(n)
+  return domainPrefixRegex.MatchString(n) && !privatePathRegex.MatchString(n) && !excludePackage(n, defaultExcludePackages)
 }
 
 /**
@@ -83,9 +95,11 @@ func looksPrivateSourceFilter(n string) bool {
       return false
     case strings.EqualFold(base, "third_party"):
       return false
+    case strings.EqualFold(base, "pkg"):
+      return false
   }
   
-  for _, e := range problemPackages {
+  for _, e := range defaultExcludePackages {
     if strings.HasSuffix(n, e) {
       return false
     }
