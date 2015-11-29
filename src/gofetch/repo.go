@@ -36,60 +36,45 @@ import (
   "path"
 )
 
-/**
- * Fetch options
- */
-type fetchOptions struct {
-  AllowUpdate, StripVCS bool
-  InferOptions inferOptions
+type repoInfo struct {
+  Output  string
+  Stat    os.FileInfo
+  Repo    *repoRoot
 }
+
+var repoCache = make(map[string]repoInfo)
 
 /**
  * Fetch a package
  */
-func fetchPackage(output string, info os.FileInfo, repo *repoRoot, opts fetchOptions) error {
-  var err error
+func packageRepo(pkg string, remap map[string]string, base string) (string, os.FileInfo, *repoRoot, error) {
   
-  if info == nil {
-    base := path.Dir(output)
-    
-    err = os.MkdirAll(base, os.ModeDir | 0755)
-    if err != nil {
-      return fmt.Errorf("could not create directory: %v\n", err)
+  if remap != nil {
+    if v, ok := remap[pkg]; ok {
+      pkg = v
     }
-    
-    err = repo.vcs.create(output, repo.repo)
-    if err != nil {
-      return fmt.Errorf("could not create repo: %v\n", err)
-    }
-    
-  }else if opts.AllowUpdate {
-    
-    err = repo.vcs.download(output)
-    if err != nil {
-      return fmt.Errorf("could not update directory: %v\n", err)
-    }
-    
-  }else{
-    
-    if optVerbose {
-      fmt.Printf("%v: %v exists (update to refresh)\n", cmd, repo.root)
-    }
-    
   }
   
-  return nil
-}
-
-/**
- * Infer package dependencies
- */
-func packageDeps(dir string, opts inferOptions) ([]string, error) {
+  cached, ok := repoCache[pkg]
+  if ok {
+    fmt.Printf("CACHED: %v\n", pkg)
+    return cached.Output, cached.Stat, cached.Repo, nil
+  }
   
-  imp, err := importsForSourceDir(dir, looksLikeADomainNameFilter, opts)
+  repo, err := repoRootForImportPath(pkg, secure)
   if err != nil {
-    return nil, fmt.Errorf("could not infer dependencies: %v\n", err)
+    return "", nil, nil, fmt.Errorf("could not determine repo root: %v\n", err)
   }
   
-  return imp, nil
+  output := path.Join(base, repo.root)
+  info, err := os.Stat(output)
+  if err != nil && !os.IsNotExist(err) {
+    return "", nil, nil, fmt.Errorf("could not read directory: %v\n", err)
+  }
+  
+  cached = repoInfo{output, info, repo}
+  repoCache[pkg]        = cached
+  repoCache[repo.root]  = cached
+  
+  return output, info, repo, nil
 }
