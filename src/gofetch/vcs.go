@@ -385,7 +385,7 @@ func (v *vcsCmd) run1(dir string, cmdline string, keyval []string, verbose bool)
 	err = cmd.Run()
 	out := buf.Bytes()
 	if err != nil {
-		if verbose || buildV {
+		if verbose || optVerbose {
 			fmt.Fprintf(os.Stderr, "# cd %s; %s %s\n", dir, v.cmd, strings.Join(args, " "))
 			os.Stderr.Write(out)
 		}
@@ -447,7 +447,7 @@ func (v *vcsCmd) fixDetachedHead(dir string) error {
 		// not on a detached head
 		return nil
 	}
-	if buildV {
+	if optVerbose {
 		log.Printf("%s on detached head; repairing", dir)
 	}
 	return v.run(dir, "checkout master")
@@ -570,7 +570,7 @@ func repoRootForImportPath(importPath string, security securityMode) (*repoRoot,
 		// dynamic import in the first place.
 		// Squelch it.
 		if err != nil {
-			if buildV {
+			if optVerbose {
 				log.Printf("import %q: %v", importPath, err)
 			}
 			err = fmt.Errorf("unrecognized import path %q", importPath)
@@ -701,7 +701,7 @@ func repoRootForImportDynamic(importPath string, security securityMode) (*repoRo
 		}
 		return nil, fmt.Errorf("parse %s: no go-import meta tags", urlStr)
 	}
-	if buildV {
+	if optVerbose {
 		log.Printf("get %q: found meta tag %#v at %s", importPath, mmi, urlStr)
 	}
 	// If the import was "uni.edu/bob/project", which said the
@@ -711,7 +711,7 @@ func repoRootForImportDynamic(importPath string, security securityMode) (*repoRo
 	// non-evil student).  Instead, first verify the root and see
 	// if it matches Bob's claim.
 	if mmi.Prefix != importPath {
-		if buildV {
+		if optVerbose {
 			log.Printf("get %q: verifying non-authoritative meta tag", importPath)
 		}
 		urlStr0 := urlStr

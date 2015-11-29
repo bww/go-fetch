@@ -47,7 +47,13 @@ type fetchOptions struct {
 /**
  * Fetch a package
  */
-func packageRepo(pkg, base string) (string, os.FileInfo, *repoRoot, error) {
+func packageRepo(pkg string, remap map[string]string, base string) (string, os.FileInfo, *repoRoot, error) {
+  
+  if remap != nil {
+    if v, ok := remap[pkg]; ok {
+      pkg = v
+    }
+  }
   
   repo, err := repoRootForImportPath(pkg, secure)
   if err != nil {

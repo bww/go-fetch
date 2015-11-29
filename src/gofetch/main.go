@@ -45,6 +45,7 @@ var buildX bool // -x flag
 
 var optVerbose bool
 var optDebug bool
+var optMapPackages stringList
 
 var cmd = path.Base(os.Args[0])
 var cmdline = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
@@ -53,8 +54,9 @@ var cmdline = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
  * Init
  */
 func init() {
-  cmdline.BoolVar (&optVerbose, "verbose",  false,   "Be verbose.")
-  cmdline.BoolVar (&optDebug,   "debug",    false,   "Be even more verbose.")
+  cmdline.BoolVar (&optVerbose,     "verbose",  false,  "Be verbose.")
+  cmdline.BoolVar (&optDebug,       "debug",    false,  "Be even more verbose.")
+  cmdline.Var     (&optMapPackages, "map",              "Explicitly map a package to its root (e.g., 'github.com/a/b/c/d=github.com/a/b'). This can be used to correct for broken repo hosts.")
 }
 
 /**
@@ -111,7 +113,7 @@ func infer(args []string) {
   noted := make(map[string]struct{})
   listed := make(map[string]struct{})
   for _, e := range cmdline.Args() {
-    err := inferInc(noted, listed, *fSource, []string{e}, opts)
+    err := inferInc(noted, listed, *fSource, []string{e}, nil, opts)
     if err != nil {
       fmt.Printf("%v: %v", cmd, err)
       return
@@ -123,11 +125,11 @@ func infer(args []string) {
 /**
  * Process packages
  */
-func inferInc(noted, listed map[string]struct{}, srcbase string, pkgs []string, opts inferOptions) error {
+func inferInc(noted, listed map[string]struct{}, srcbase string, pkgs []string, remap map[string]string, opts inferOptions) error {
   for _, e := range pkgs {
     
     // find our repo
-    dir, info, _, err := packageRepo(e, srcbase)
+    dir, info, _, err := packageRepo(e, remap, srcbase)
     if err != nil {
       return err
     }
@@ -162,7 +164,7 @@ func inferInc(noted, listed map[string]struct{}, srcbase string, pkgs []string, 
     }
     
     // recurse to dependencies
-    err = inferInc(noted, listed, srcbase, deps, opts)
+    err = inferInc(noted, listed, srcbase, deps, remap, opts)
     if err != nil {
       return err
     }
@@ -181,6 +183,18 @@ func fetch(args []string) {
   fKeepVCS  := cmdline.Bool   ("keep-vcs",  false,             "Retain VCS files from downloaded packages (.git, .svn, .hg, .bzr).")
   cmdline.Parse(args)
   
+  mapPackages := make(map[string]string)
+  if optMapPackages != nil {
+    for _, e := range optMapPackages {
+      p := strings.Split(e, "=")
+      if len(p) != 2 {
+        fmt.Printf("%v: invalid package mapping: %v", cmd, e)
+        return
+      }
+      mapPackages[p[0]] = p[1]
+    }
+  }
+  
   opts := fetchOptions{
     AllowUpdate: *fUpdate,
     StripVCS: !*fKeepVCS,
@@ -190,7 +204,7 @@ func fetch(args []string) {
   }
   
   noted := make(map[string]struct{})
-  err := fetchInc(noted, cmdline.Args(), *fOutput, opts)
+  err := fetchInc(noted, cmdline.Args(), mapPackages, *fOutput, opts)
   if err != nil {
     fmt.Printf("%v: %v", cmd, err)
     return
@@ -201,11 +215,11 @@ func fetch(args []string) {
 /**
  * Process packages
  */
-func fetchInc(noted map[string]struct{}, pkgs []string, outbase string, opts fetchOptions) error {
+func fetchInc(noted map[string]struct{}, pkgs []string, remap map[string]string, outbase string, opts fetchOptions) error {
   for _, e := range pkgs {
     
     // find our repo
-    dir, info, repo, err := packageRepo(e, outbase)
+    dir, info, repo, err := packageRepo(e, remap, outbase)
     if err != nil {
       return err
     }
@@ -253,7 +267,7 @@ func fetchInc(noted map[string]struct{}, pkgs []string, outbase string, opts fet
     }
     
     // recurse to dependencies
-    err = fetchInc(noted, deps, outbase, opts)
+    err = fetchInc(noted, deps, remap, outbase, opts)
     if err != nil {
       return err
     }

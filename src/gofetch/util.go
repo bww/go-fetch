@@ -83,3 +83,23 @@ func prunePath(dir string, filter pathFilter, rec bool) error {
   
   return nil
 }
+
+/**
+ * String list for flags
+ */
+type stringList []string
+
+/**
+ * Set a flag
+ */
+func (s *stringList) Set(v string) error {
+  *s = append(*s, v)
+  return nil
+}
+
+/**
+ * Describe
+ */
+func (s *stringList) String() string {
+  return fmt.Sprintf("%+v", *s)
+}
